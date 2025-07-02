@@ -16,8 +16,7 @@ export function Header(props: HeaderProps) {
               <span className='text-white font-bold text-sm'>PH</span>
             </div>
             <div>
-              <h1 className='font-bold text-xl text-gray-900'>Product Hunt</h1>
-              <p className='text-sm text-gray-500'>Daily discoveries</p>
+              <h1 className='font-bold text-xl text-gray-900'>Product Hunt – Feed-mode</h1>
             </div>
           </div>
 

@@ -52,7 +52,8 @@ export function HoverVideo(props: HoverVideoProps) {
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0]
-        if (!entry?.isIntersecting && showVideo) {
+        // Use a ref to get current showVideo state to avoid dependency issues
+        if (!entry?.isIntersecting) {
           console.log('📺 video went off-screen, stopping', videoId)
           stopVideo()
           clearActiveVideo(videoId)
@@ -66,7 +67,7 @@ export function HoverVideo(props: HoverVideoProps) {
     return () => {
       observer.disconnect()
     }
-  }, [showVideo, videoId])
+  }, [videoId]) // Removed showVideo from dependencies
 
   // Cleanup on unmount
   useEffect(() => {
