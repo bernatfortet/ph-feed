@@ -197,7 +197,7 @@ export function HoverVideo(props: HoverVideoProps) {
         alt={alt}
         width={width}
         height={height}
-        className='w-full h-auto object-cover'
+        className='w-full h-full object-cover object-center'
         unoptimized={thumbnailUrl.includes('.gif')}
       />
 
@@ -206,7 +206,7 @@ export function HoverVideo(props: HoverVideoProps) {
         <div className='absolute inset-0 bg-black'>
           <video
             ref={videoRef}
-            className='w-full h-full object-cover cursor-pointer'
+            className='w-full h-full object-cover object-center cursor-pointer'
             muted
             playsInline
             onTimeUpdate={handleTimeUpdate}
@@ -279,7 +279,7 @@ export function HoverVideo(props: HoverVideoProps) {
         <div className='absolute inset-0'>
           <iframe
             src={embedUrl}
-            className='w-full h-full object-cover'
+            className='w-full h-full'
             frameBorder='0'
             allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
             allowFullScreen
@@ -298,7 +298,7 @@ export function HoverVideo(props: HoverVideoProps) {
             isHovered ? 'scale-110 bg-black/80' : 'scale-100'
           }`}
         >
-          <svg className='w-8 h-8 text-white ml-1' fill='currentColor' viewBox='0 0 24 24'>
+          <svg className='w-8 h-8 relative -left-[2px] rounded-sm text-white ml-1' fill='currentColor' viewBox='0 0 24 24'>
             <path d='M8 5v14l11-7z' />
           </svg>
         </div>

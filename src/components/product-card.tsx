@@ -1,6 +1,6 @@
 import Image from 'next/image'
 import { Post } from '~/types/product-hunt.types'
-import { HoverVideo } from './hover-video'
+import { PostMediaGallery } from './post-media-gallery'
 
 interface ProductCardProps {
   post: Post
@@ -70,29 +70,8 @@ export function ProductCard(props: ProductCardProps) {
           {/* Description */}
           {post.description && <p className='text-gray-700 text-sm mb-3 line-clamp-2'>{post.description}</p>}
 
-          {/* Gallery image/video */}
-          {getFirstMediaItem(post) && (
-            <div className='mb-3 rounded-lg overflow-hidden border border-gray-200'>
-              {getFirstMediaItem(post)!.type === 'video' && getFirstMediaItem(post)!.videoUrl ? (
-                <HoverVideo
-                  thumbnailUrl={getFirstMediaItem(post)!.url}
-                  videoUrl={getFirstMediaItem(post)!.videoUrl!}
-                  alt={post.name}
-                  width={500}
-                  height={300}
-                />
-              ) : (
-                <Image
-                  src={getFirstMediaItem(post)!.url}
-                  alt={post.name}
-                  width={500}
-                  height={300}
-                  className='w-full h-auto object-cover'
-                  unoptimized={getFirstMediaItem(post)!.url.includes('.gif')}
-                />
-              )}
-            </div>
-          )}
+          {/* Media Gallery */}
+          <PostMediaGallery post={post} className='mb-3' />
 
           {/* Topics */}
           {post.topics?.edges && post.topics.edges.length > 0 && (
@@ -149,13 +128,6 @@ export function ProductCard(props: ProductCardProps) {
       </div>
     </article>
   )
-}
-
-function getFirstMediaItem(post: Post) {
-  if (post.media && post.media.length > 0) {
-    return post.media[0]
-  }
-  return null
 }
 
 function formatTimeAgo(dateString: string): string {
