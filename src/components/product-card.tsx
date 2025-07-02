@@ -15,14 +15,7 @@ export function ProductCard(props: ProductCardProps) {
         {/* Product logo/thumbnail */}
         <div className='flex-shrink-0'>
           {post.thumbnail?.url ? (
-            <Image
-              src={post.thumbnail.url}
-              alt={post.name}
-              width={48}
-              height={48}
-              className='rounded-lg object-cover'
-              unoptimized={post.thumbnail.url.includes('.gif')}
-            />
+            <Image src={post.thumbnail.url} alt={post.name} width={48} height={48} className='rounded-lg object-cover' />
           ) : (
             <div className='w-12 h-12 bg-gradient-to-br from-orange-400 to-pink-500 rounded-lg flex items-center justify-center'>
               <span className='text-white font-bold text-lg'>{post.name.charAt(0).toUpperCase()}</span>
