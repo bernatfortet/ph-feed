@@ -24,6 +24,7 @@ export function HoverVideo(props: HoverVideoProps) {
   const progressRef = useRef<HTMLDivElement>(null)
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const youtubePlayerRef = useRef<HTMLIFrameElement>(null)
   const videoId = useId()
 
   const isYouTubeVideo = isYouTubeUrl(videoUrl)
@@ -73,6 +74,23 @@ export function HoverVideo(props: HoverVideoProps) {
       clearActiveVideo(videoId)
     }
   }, [videoId])
+
+  // Try to set YouTube playback speed when video shows
+  useEffect(() => {
+    if (showVideo && isYouTubeVideo && youtubePlayerRef.current) {
+      const iframe = youtubePlayerRef.current
+      const timeoutId = setTimeout(() => {
+        try {
+          // Try to post message to YouTube player to set playback rate
+          iframe.contentWindow?.postMessage('{"event":"command","func":"setPlaybackRate","args":[2]}', 'https://www.youtube.com')
+        } catch (error) {
+          console.log('Could not set YouTube playback rate:', error)
+        }
+      }, 1000) // Wait for player to be ready
+
+      return () => clearTimeout(timeoutId)
+    }
+  }, [showVideo, isYouTubeVideo])
 
   function handleMouseEnter() {
     setIsHovered(true)
@@ -174,7 +192,7 @@ export function HoverVideo(props: HoverVideoProps) {
     for (const pattern of regexPatterns) {
       const match = url.match(pattern)
       if (match) {
-        return `https://www.youtube.com/embed/${match[1]}?autoplay=1&mute=1&controls=1&loop=1&playlist=${match[1]}`
+        return `https://www.youtube.com/embed/${match[1]}?autoplay=1&mute=1&controls=1&loop=1&playlist=${match[1]}&enablejsapi=1`
       }
     }
     return null
@@ -278,9 +296,9 @@ export function HoverVideo(props: HoverVideoProps) {
       {showVideo && isYouTubeVideo && embedUrl && (
         <div className='absolute inset-0'>
           <iframe
+            ref={youtubePlayerRef}
             src={embedUrl}
             className='w-full h-full'
-            frameBorder='0'
             allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture'
             allowFullScreen
           />

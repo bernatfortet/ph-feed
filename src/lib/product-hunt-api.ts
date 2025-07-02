@@ -125,9 +125,17 @@ export async function fetchProductHuntPosts(params: { date?: string; first?: num
   let postedBefore: string | undefined
 
   if (date) {
-    const targetDate = new Date(date)
-    postedAfter = new Date(targetDate.setHours(0, 0, 0, 0)).toISOString()
-    postedBefore = new Date(targetDate.setHours(23, 59, 59, 999)).toISOString()
+    // Parse the date string (YYYY-MM-DD) in local timezone
+    const [year, month, day] = date.split('-').map(Number)
+
+    // Set the time range for that day in local timezone
+    const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0)
+    const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999)
+
+    postedAfter = startOfDay.toISOString()
+    postedBefore = endOfDay.toISOString()
+
+    console.log('📅 Date range for', date, ':', { postedAfter, postedBefore })
   }
 
   const variables = {
@@ -175,11 +183,12 @@ export async function fetchProductHuntPosts(params: { date?: string; first?: num
 }
 
 export function formatDate(date: Date): string {
-  const result = date.toISOString().split('T')[0]
-  return result
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 export function getTodayDate(): string {
-  const result = formatDate(new Date())
-  return result
+  return formatDate(new Date())
 }
