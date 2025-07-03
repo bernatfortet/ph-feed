@@ -36,7 +36,7 @@ export function PostMediaGallery(props: PostMediaGalleryProps) {
             return (
               <div
                 key={`${mediaItem.url}-${index}`}
-                className='relative h-full overflow-hidden rounded cursor-pointer group'
+                className='relative h-full overflow-hidden rounded group'
                 style={{ width }}
                 onMouseEnter={() => handleThumbnailHover(index)}
               >

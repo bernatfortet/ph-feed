@@ -11,7 +11,7 @@ export function ProductCard(props: ProductCardProps) {
   const { post } = props
 
   return (
-    <article className='border-b border-gray-200 p-4 hover:bg-gray-50 transition-colors cursor-pointer'>
+    <article className='border-b border-gray-200 p-4 hover:bg-gray-50 transition-colors'>
       <div className='flex gap-3'>
         {/* Product logo/thumbnail */}
         <div className='flex-shrink-0'>
@@ -28,9 +28,9 @@ export function ProductCard(props: ProductCardProps) {
         <div className='flex-1 min-w-0'>
           {/* Header with product name and maker */}
           <div className='flex items-start justify-between mb-2'>
-            <div className='flex-1 min-w-0'>
-              <div className='flex items-center gap-2 mb-1'>
-                <h3 className='font-bold text-lg text-gray-900 truncate'>{post.name}</h3>
+            <div className='flex-1 min-w-0 cursor-pointer' onClick={() => window.open(post.url, '_blank', 'noopener,noreferrer')}>
+              <div className='flex items-center gap-2'>
+                <h3 className='font-bold text-lg -mt-1 text-gray-900 truncate'>{post.name}</h3>
                 {post.user?.username && !post.user.username.includes('[REDACTED]') && (
                   <span className='text-gray-500 text-sm'>by @{post.user.username}</span>
                 )}
@@ -39,7 +39,7 @@ export function ProductCard(props: ProductCardProps) {
             </div>
 
             {/* Vote button */}
-            <UpvoteButton post={post} />
+            <UpvoteButton post={post} className='-mt-2' />
           </div>
 
           {/* Description */}
