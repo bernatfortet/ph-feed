@@ -1,4 +1,4 @@
-import { PostsResponse } from '~/types/product-hunt.types'
+import { PostsResponse, Post } from '~/types/product-hunt.types'
 import { getCachedData, setCachedData } from './product-hunt-cache'
 
 const PRODUCT_HUNT_API_URL = 'https://api.producthunt.com/v2/api/graphql'
@@ -211,6 +211,80 @@ export async function fetchProductHuntPosts(params: { date?: string; first?: num
     return result
   } catch (error) {
     console.error('🚨 Error fetching Product Hunt posts', error)
+    throw error
+  }
+}
+
+export async function fetchAllProductHuntPosts(params: { date: string; pageSize?: number }) {
+  const { date, pageSize = 50 } = params
+
+  // Check cache first for all posts of the day
+  const cacheKey = `all-posts-${date}`
+  const cachedData = getCachedData<PostsResponse>(cacheKey)
+  if (cachedData) {
+    console.log('💾 Using cached ALL posts for', date, '- Total:', cachedData.posts.edges.length)
+    return cachedData
+  }
+
+  console.log('🏁 Fetching ALL posts for', date, 'with pagination...')
+
+  const allPosts: Array<{ node: Post; cursor: string }> = []
+  let hasNextPage = true
+  let after: string | undefined
+  let pageCount = 0
+
+  try {
+    while (hasNextPage) {
+      pageCount++
+      console.log(`🌀 Fetching page ${pageCount}...`)
+
+      const response = await fetchProductHuntPosts({
+        date,
+        first: pageSize,
+        after,
+      })
+
+      if (!response?.posts?.edges) {
+        console.log('🚨 No posts data received')
+        break
+      }
+
+      // Add posts from this page
+      allPosts.push(...response.posts.edges)
+
+      // Check if there are more pages
+      hasNextPage = response.posts.pageInfo.hasNextPage
+      after = response.posts.pageInfo.endCursor
+
+      console.log(`✅ Page ${pageCount} completed - ${response.posts.edges.length} posts, hasNextPage: ${hasNextPage}`)
+
+      // Safety check to prevent infinite loops
+      if (pageCount > 20) {
+        console.log('🚨 Safety break: reached maximum page limit')
+        break
+      }
+    }
+
+    // Create the final response structure
+    const allPostsResponse: PostsResponse = {
+      posts: {
+        edges: allPosts,
+        pageInfo: {
+          hasNextPage: false,
+          hasPreviousPage: false,
+          startCursor: allPosts[0]?.cursor || '',
+          endCursor: allPosts[allPosts.length - 1]?.cursor || '',
+        },
+      },
+    }
+
+    // Cache the complete result for 24 hours
+    setCachedData(cacheKey, allPostsResponse, 24 * 60 * 60 * 1000)
+
+    console.log(`🎉 Successfully fetched ALL posts for ${date}! Total: ${allPosts.length} posts across ${pageCount} pages`)
+    return allPostsResponse
+  } catch (error) {
+    console.error('🚨 Error fetching all Product Hunt posts', error)
     throw error
   }
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { fetchProductHuntPosts } from '~/lib/product-hunt-api'
+import { fetchAllProductHuntPosts } from '~/lib/product-hunt-api'
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Date parameter is required' }, { status: 400 })
     }
 
-    const data = await fetchProductHuntPosts({ date })
+    const data = await fetchAllProductHuntPosts({ date })
 
     console.log('✅ API request completed successfully')
     return NextResponse.json(data)
