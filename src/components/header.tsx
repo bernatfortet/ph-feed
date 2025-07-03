@@ -12,16 +12,16 @@ export function Header(props: HeaderProps) {
         <div className='flex items-center justify-between'>
           {/* Logo and title */}
           <div className='flex items-center gap-3'>
-            <div className='w-8 h-8 bg-gradient-to-br from-orange-400 to-pink-500 rounded-lg flex items-center justify-center'>
+            <div className='w-8 h-8 shrink-0 bg-gradient-to-br from-orange-400 to-pink-500 rounded-lg flex items-center justify-center'>
               <span className='text-white font-bold text-sm'>PH</span>
             </div>
             <div>
-              <h1 className='font-bold text-xl text-gray-900'>Product Hunt – Feed-mode</h1>
+              <h1 className='font-bold leading-6 text-xl text-gray-900'>Product Hunt – Feed-mode</h1>
             </div>
           </div>
 
           {/* Date picker */}
-          <div className='flex items-center gap-2'>
+          <div className='flex items-center gap-2 md:flex-row flex-col'>
             <label htmlFor='date-picker' className='text-sm text-gray-600'>
               Date:
             </label>

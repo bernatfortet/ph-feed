@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import { Post } from '~/types/product-hunt.types'
 import { HoverVideo } from './hover-video'
@@ -13,15 +13,61 @@ interface PostMediaGalleryProps {
 export function PostMediaGallery(props: PostMediaGalleryProps) {
   const { post, className = '' } = props
   const [selectedMediaIndex, setSelectedMediaIndex] = useState(0)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  function handleScroll() {
+    if (!scrollContainerRef.current) return
+
+    const container = scrollContainerRef.current
+    const itemWidth = container.clientWidth
+    const scrollLeft = container.scrollLeft
+    const newIndex = Math.round(scrollLeft / itemWidth)
+
+    if (newIndex !== selectedMediaIndex && newIndex >= 0 && newIndex < post.media.length) {
+      setSelectedMediaIndex(newIndex)
+    }
+  }
+
+  useEffect(() => {
+    const container = scrollContainerRef.current
+    if (!container) return
+
+    function handleScrollThrottled() {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
+      }
+      scrollTimeoutRef.current = setTimeout(handleScroll, 100)
+    }
+
+    container.addEventListener('scroll', handleScrollThrottled)
+    return () => {
+      container.removeEventListener('scroll', handleScrollThrottled)
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
+      }
+    }
+  }, [selectedMediaIndex, post.media.length])
 
   if (!post.media || post.media.length === 0) return null
 
-  const selectedMedia = post.media[selectedMediaIndex]
   const hasMultipleMedia = post.media.length > 1
   const fixedAspectRatio = 16 / 9 // 1.778 (16:9 widescreen)
 
-  function handleThumbnailHover(index: number) {
+  function handleThumbnailClick(index: number) {
     setSelectedMediaIndex(index)
+    scrollToMedia(index)
+  }
+
+  function scrollToMedia(index: number) {
+    if (!scrollContainerRef.current) return
+
+    const container = scrollContainerRef.current
+    const itemWidth = container.clientWidth
+    container.scrollTo({
+      left: index * itemWidth,
+      behavior: 'smooth',
+    })
   }
 
   return (
@@ -36,9 +82,10 @@ export function PostMediaGallery(props: PostMediaGalleryProps) {
             return (
               <div
                 key={`${mediaItem.url}-${index}`}
-                className='relative h-full overflow-hidden rounded group'
+                className='relative h-full overflow-hidden rounded group cursor-pointer'
                 style={{ width }}
-                onMouseEnter={() => handleThumbnailHover(index)}
+                onMouseEnter={() => setSelectedMediaIndex(index)}
+                onClick={() => handleThumbnailClick(index)}
               >
                 <Image
                   src={mediaItem.url}
@@ -77,31 +124,41 @@ export function PostMediaGallery(props: PostMediaGalleryProps) {
         </div>
       )}
 
-      {/* Main Media Display */}
+      {/* Scrollable Media Container */}
       <div className='rounded-lg overflow-hidden border border-gray-200'>
-        {selectedMedia.type === 'video' && selectedMedia.videoUrl ? (
-          <div style={{ aspectRatio: fixedAspectRatio }}>
-            <HoverVideo
-              thumbnailUrl={selectedMedia.url}
-              videoUrl={selectedMedia.videoUrl}
-              alt={post.name}
-              width={500}
-              height={Math.round(500 / fixedAspectRatio)}
-              className='w-full h-full'
-            />
-          </div>
-        ) : (
-          <div style={{ aspectRatio: fixedAspectRatio }}>
-            <Image
-              src={selectedMedia.url}
-              alt={post.name}
-              width={500}
-              height={Math.round(500 / fixedAspectRatio)}
-              className='w-full h-full object-cover object-center'
-              unoptimized={selectedMedia.url.includes('.gif')}
-            />
-          </div>
-        )}
+        <div
+          ref={scrollContainerRef}
+          className='flex overflow-x-auto scrollbar-hide snap-x snap-mandatory'
+          style={{
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            WebkitOverflowScrolling: 'touch',
+          }}
+        >
+          {post.media.map((mediaItem, index) => (
+            <div key={`${mediaItem.url}-${index}`} className='flex-none w-full snap-start' style={{ aspectRatio: fixedAspectRatio }}>
+              {mediaItem.type === 'video' && mediaItem.videoUrl ? (
+                <HoverVideo
+                  thumbnailUrl={mediaItem.url}
+                  videoUrl={mediaItem.videoUrl}
+                  alt={`${post.name} media ${index + 1}`}
+                  width={500}
+                  height={Math.round(500 / fixedAspectRatio)}
+                  className='w-full h-full'
+                />
+              ) : (
+                <Image
+                  src={mediaItem.url}
+                  alt={`${post.name} media ${index + 1}`}
+                  width={500}
+                  height={Math.round(500 / fixedAspectRatio)}
+                  className='w-full h-full object-cover object-center'
+                  unoptimized={mediaItem.url.includes('.gif')}
+                />
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )
