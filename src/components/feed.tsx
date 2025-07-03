@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Post } from '~/types/product-hunt.types'
 import { ProductCard } from './product-card'
+import { setVoteLoading } from '~/lib/vote-store'
 
 interface FeedProps {
   selectedDate: string
@@ -40,12 +41,52 @@ export function Feed(props: FeedProps) {
       const postNodes = data.posts?.edges?.map((edge: { node: Post }) => edge.node) || []
       setPosts(postNodes)
       console.log('✅ Successfully loaded posts:', postNodes.length)
+
+      // After main posts load, fetch fresh vote counts in background
+      fetchVotesUpdate(postNodes)
     } catch (err) {
       console.error('🚨 Error fetching posts:', err)
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch posts'
       setError(errorMessage)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function fetchVotesUpdate(currentPosts: Post[]) {
+    if (currentPosts.length === 0) return
+
+    setVoteLoading(true)
+    try {
+      console.log('⚡ Fetching fresh vote counts for date:', selectedDate)
+
+      const response = await fetch(`/api/votes?date=${selectedDate}`)
+
+      if (!response.ok) {
+        console.warn('Failed to fetch vote updates:', response.status)
+        return
+      }
+
+      const data = await response.json()
+
+      if (data.error) {
+        console.warn('Vote update error:', data.error)
+        return
+      }
+
+      // Merge fresh vote counts with existing posts
+      const updatedPosts = currentPosts.map((post) => ({
+        ...post,
+        votesCount: data.votes[post.id] ?? post.votesCount,
+      }))
+
+      setPosts(updatedPosts)
+      console.log('✅ Updated vote counts for', Object.keys(data.votes).length, 'posts')
+    } catch (err) {
+      console.warn('🚨 Error updating votes (non-critical):', err)
+      // Don't show error to user since this is background update
+    } finally {
+      setVoteLoading(false)
     }
   }
 

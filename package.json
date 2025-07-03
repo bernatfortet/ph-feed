@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@nanostores/react": "^1.0.0",
     "nanostores": "^1.0.1",
     "next": "15.3.4",
     "react": "^19.0.0",

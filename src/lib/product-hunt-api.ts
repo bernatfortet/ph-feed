@@ -1,4 +1,5 @@
 import { PostsResponse } from '~/types/product-hunt.types'
+import { getCachedData, setCachedData } from './product-hunt-cache'
 
 const PRODUCT_HUNT_API_URL = 'https://api.producthunt.com/v2/api/graphql'
 const PRODUCT_HUNT_OAUTH_URL = 'https://api.producthunt.com/v2/oauth/token'
@@ -15,12 +16,9 @@ const POSTS_QUERY = `
           name
           tagline
           description
-          slug
           votesCount
           commentsCount
           createdAt
-          featuredAt
-          website
           url
           thumbnail {
             type
@@ -32,25 +30,13 @@ const POSTS_QUERY = `
             videoUrl
           }
           user {
-            id
-            name
             username
-            profileImage
-            headline
-          }
-          makers {
-            id
-            name
-            username
-            profileImage
-            headline
           }
           topics {
             edges {
               node {
                 id
                 name
-                slug
               }
             }
           }
@@ -62,6 +48,20 @@ const POSTS_QUERY = `
         hasPreviousPage
         startCursor
         endCursor
+      }
+    }
+  }
+`
+
+// Lightweight query for just vote counts - very low complexity!
+const VOTES_QUERY = `
+  query PostVotes($first: Int!, $postedAfter: DateTime, $postedBefore: DateTime) {
+    posts(first: $first, postedAfter: $postedAfter, postedBefore: $postedBefore, order: VOTES) {
+      edges {
+        node {
+          id
+          votesCount
+        }
       }
     }
   }
@@ -120,6 +120,16 @@ async function getAccessToken(): Promise<string> {
 export async function fetchProductHuntPosts(params: { date?: string; first?: number; after?: string }) {
   const { date, first = 20, after } = params
 
+  // Check cache first for complete date requests (no pagination)
+  if (date && !after) {
+    const cacheKey = `posts-${date}-${first}`
+    const cachedData = getCachedData<PostsResponse>(cacheKey)
+    if (cachedData) {
+      console.log('💾 Using cached posts for', date)
+      return cachedData
+    }
+  }
+
   // If date is provided, set the time range for that day
   let postedAfter: string | undefined
   let postedBefore: string | undefined
@@ -145,7 +155,7 @@ export async function fetchProductHuntPosts(params: { date?: string; first?: num
     postedBefore,
   }
 
-  console.log('🌀 Fetching Product Hunt posts', { variables })
+  console.log('🌀 Fetching Product Hunt posts from API', { variables })
 
   try {
     // Get access token first
@@ -167,6 +177,20 @@ export async function fetchProductHuntPosts(params: { date?: string; first?: num
       throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`)
     }
 
+    // Log rate limit headers from Product Hunt API
+    const rateLimitLimit = response.headers.get('X-Rate-Limit-Limit')
+    const rateLimitRemaining = response.headers.get('X-Rate-Limit-Remaining')
+    const rateLimitReset = response.headers.get('X-Rate-Limit-Reset')
+
+    if (rateLimitLimit) {
+      console.log('⚡ Rate Limit Status:', {
+        limit: rateLimitLimit,
+        remaining: rateLimitRemaining,
+        resetInSeconds: rateLimitReset,
+        percentUsed: Math.round(((Number(rateLimitLimit) - Number(rateLimitRemaining)) / Number(rateLimitLimit)) * 100),
+      })
+    }
+
     const data = await response.json()
 
     if (data.errors) {
@@ -174,8 +198,17 @@ export async function fetchProductHuntPosts(params: { date?: string; first?: num
       throw new Error(data.errors[0]?.message || 'GraphQL error')
     }
 
-    console.log('✅ Successfully fetched Product Hunt posts', data.data?.posts?.edges?.length)
-    return data.data as PostsResponse
+    const result = data.data as PostsResponse
+
+    // Cache the complete result for date-based requests (no pagination)
+    if (date && !after) {
+      const cacheKey = `posts-${date}-${first}`
+      setCachedData(cacheKey, result, 24 * 60 * 60 * 1000) // 24 hours
+      console.log('💾 Cached posts for', date)
+    }
+
+    console.log('✅ Successfully fetched Product Hunt posts from API', result?.posts?.edges?.length)
+    return result
   } catch (error) {
     console.error('🚨 Error fetching Product Hunt posts', error)
     throw error
@@ -191,4 +224,86 @@ export function formatDate(date: Date): string {
 
 export function getTodayDate(): string {
   return formatDate(new Date())
+}
+
+export async function fetchProductHuntVotes(params: { date?: string; first?: number }) {
+  const { date, first = 50 } = params
+
+  // If date is provided, set the time range for that day
+  let postedAfter: string | undefined
+  let postedBefore: string | undefined
+
+  if (date) {
+    // Parse the date string (YYYY-MM-DD) in local timezone
+    const [year, month, day] = date.split('-').map(Number)
+
+    // Set the time range for that day in local timezone
+    const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0)
+    const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999)
+
+    postedAfter = startOfDay.toISOString()
+    postedBefore = endOfDay.toISOString()
+  }
+
+  const variables = {
+    first,
+    postedAfter,
+    postedBefore,
+  }
+
+  console.log('⚡ Fetching vote counts only (low complexity)', { variables })
+
+  try {
+    // Get access token first
+    const accessToken = await getAccessToken()
+
+    const response = await fetch(PRODUCT_HUNT_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        query: VOTES_QUERY,
+        variables,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch votes: ${response.status} ${response.statusText}`)
+    }
+
+    // Log rate limit headers
+    const rateLimitLimit = response.headers.get('X-Rate-Limit-Limit')
+    const rateLimitRemaining = response.headers.get('X-Rate-Limit-Remaining')
+    const rateLimitReset = response.headers.get('X-Rate-Limit-Reset')
+
+    if (rateLimitLimit) {
+      console.log('⚡ Rate Limit Status (votes query):', {
+        limit: rateLimitLimit,
+        remaining: rateLimitRemaining,
+        resetInSeconds: rateLimitReset,
+        percentUsed: Math.round(((Number(rateLimitLimit) - Number(rateLimitRemaining)) / Number(rateLimitLimit)) * 100),
+      })
+    }
+
+    const data = await response.json()
+
+    if (data.errors) {
+      console.log('🚨 GraphQL errors', data.errors)
+      throw new Error(data.errors[0]?.message || 'GraphQL error')
+    }
+
+    // Extract vote counts into a simple object
+    const votes: Record<string, number> = {}
+    data.data?.posts?.edges?.forEach((edge: { node: { id: string; votesCount: number } }) => {
+      votes[edge.node.id] = edge.node.votesCount
+    })
+
+    console.log('✅ Successfully fetched vote counts', Object.keys(votes).length, 'posts')
+    return votes
+  } catch (error) {
+    console.error('🚨 Error fetching vote counts', error)
+    throw error
+  }
 }
