@@ -13,6 +13,7 @@ interface PostMediaGalleryProps {
 export function PostMediaGallery(props: PostMediaGalleryProps) {
   const { post, className = '' } = props
   const [selectedMediaIndex, setSelectedMediaIndex] = useState(0)
+  const [isDesktop, setIsDesktop] = useState(false)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
@@ -49,6 +50,18 @@ export function PostMediaGallery(props: PostMediaGalleryProps) {
     }
   }, [selectedMediaIndex, post.media.length])
 
+  useEffect(() => {
+    const checkIsDesktop = () => {
+      setIsDesktop(window.matchMedia('(min-width: 768px)').matches)
+    }
+
+    checkIsDesktop()
+    const mediaQuery = window.matchMedia('(min-width: 768px)')
+    mediaQuery.addEventListener('change', checkIsDesktop)
+
+    return () => mediaQuery.removeEventListener('change', checkIsDesktop)
+  }, [])
+
   if (!post.media || post.media.length === 0) return null
 
   const hasMultipleMedia = post.media.length > 1
@@ -56,17 +69,23 @@ export function PostMediaGallery(props: PostMediaGalleryProps) {
 
   function handleThumbnailClick(index: number) {
     setSelectedMediaIndex(index)
-    scrollToMedia(index)
+    scrollToMedia(index, true)
   }
 
-  function scrollToMedia(index: number) {
+  function handleThumbnailHover(index: number) {
+    if (!isDesktop) return
+    setSelectedMediaIndex(index)
+    scrollToMedia(index, false)
+  }
+
+  function scrollToMedia(index: number, smooth: boolean = true) {
     if (!scrollContainerRef.current) return
 
     const container = scrollContainerRef.current
     const itemWidth = container.clientWidth
     container.scrollTo({
       left: index * itemWidth,
-      behavior: 'smooth',
+      behavior: smooth ? 'smooth' : 'instant',
     })
   }
 
@@ -84,7 +103,7 @@ export function PostMediaGallery(props: PostMediaGalleryProps) {
                 key={`${mediaItem.url}-${index}`}
                 className='relative h-full overflow-hidden rounded group cursor-pointer'
                 style={{ width }}
-                onMouseEnter={() => setSelectedMediaIndex(index)}
+                onMouseEnter={() => handleThumbnailHover(index)}
                 onClick={() => handleThumbnailClick(index)}
               >
                 <Image
