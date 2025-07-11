@@ -32,14 +32,6 @@ const POSTS_QUERY = `
           user {
             username
           }
-          topics {
-            edges {
-              node {
-                id
-                name
-              }
-            }
-          }
         }
         cursor
       }
@@ -216,7 +208,7 @@ export async function fetchProductHuntPosts(params: { date?: string; first?: num
 }
 
 export async function fetchAllProductHuntPosts(params: { date: string; pageSize?: number }) {
-  const { date, pageSize = 50 } = params
+  const { date, pageSize = 20 } = params
 
   // Check cache first for all posts of the day
   const cacheKey = `all-posts-${date}`
